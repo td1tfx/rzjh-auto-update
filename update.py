@@ -22,6 +22,40 @@ defaults = dict(
 # global lock
 lock = threading.Lock()
 
+def new_download(url, file_path):
+    # 第一次请求是为了得到文件总大小
+    r1 = requests.get(url, stream=True, verify=False)
+    total_size = int(r1.headers['Content-Length'])
+
+    # 这重要了，先看看本地文件下载了多少
+    if os.path.exists(file_path):
+        temp_size = os.path.getsize(file_path)  # 本地已经下载的文件大小
+    else:
+        temp_size = 0
+    # 显示一下下载了多少   
+    print(temp_size)
+    print(total_size)
+    # 核心部分，这个是请求下载时，从本地文件已经下载过的后面下载
+    headers = {'Range': 'bytes=%d-' % temp_size}  
+    # 重新请求网址，加入新的请求头的
+    r = requests.get(url, stream=True, verify=False, headers=headers)
+
+    # 下面写入文件也要注意，看到"ab"了吗？
+    # "ab"表示追加形式写入文件
+    with open(file_path, "ab") as f:
+        for chunk in r.iter_content(chunk_size=1024):
+            if chunk:
+                temp_size += len(chunk)
+                f.write(chunk)
+                f.flush()
+
+                ###这是下载实现进度显示####
+                done = int(50 * temp_size / total_size)
+                sys.stdout.write("\r[%s%s] %d%%" % ('█' * done, ' ' * (50 - done), 100 * temp_size / total_size))
+                sys.stdout.flush()
+    print()  # 避免上面\r 回车符
+
+
 def get_file_info(url):  # 发送请求读取要下载的文件大小
     class HeadRequest(urllib.request.Request):
         def get_method(self):
@@ -72,12 +106,8 @@ def download(url, output,  # 下载
     threading.Thread(target=_monitor, args=(
         infopath, file_info, blocks)).start()
     with open(workpath, 'rb+') as fobj:
-        if len(blocks)>1:
-            args = [(url, blocks, fobj, buffer_size)
-                for i in range(len(blocks)) if blocks[1] < blocks[2]]
-        else:
-            args = [(url, blocks, fobj, buffer_size)
-                for i in range(len(blocks))]
+        args = [(url, blocks, fobj, buffer_size)
+                for i in range(len(blocks)) if blocks[i-1] < blocks[i]]
         if thread_count > len(args):
             thread_count = len(args)
         pool = ThreadPool(thread_count)
@@ -182,7 +212,7 @@ def delzip(pathT, zipfile_name):  # 删除压缩包
 
 def newrename(pathT, j, zipfile_name):  # 将解压后的压缩包更名到  包名+版本号
     os.listdir(pathT)
-    b = 'filename' + j
+    b =  '{}{}'.format('rzjh', j) 
     os.rename(zipfile_name + "_files", b.encode("utf-8"))
     return b
 
@@ -191,10 +221,11 @@ def reversion(version_path, new_version):  # 将获取的新版本号替换进�
     data = f.read()
     print(data)
     j = json.loads(data)
+    print(j)
     #res = geturl1(version_path) 
     j["version"] = new_version
     with open(version_path, 'wb') as f:
-        f.write(json.dumps(j))  # 写进json
+        f.write(json.dumps(j).encode("utf-8"))  # 写进json
 
 
 def rename(pathT,local_version):  # 更改老版本文件名
@@ -206,9 +237,8 @@ def rename(pathT,local_version):  # 更改老版本文件名
     else:
         pass    
 
-def delold():  # 删除更名后的老版本
-    shutil.rmtree("将要删除的文件夹路径和文件夹名willdele")
-# 参考文献：https://www.cnblogs.com/FengZiQ/p/8532141.html
+#def delold():  # 删除更名后的老版本
+    #shutil.rmtree("将要删除的文件夹路径和文件夹名willdele")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='多线程文件下载器.')
@@ -219,10 +249,10 @@ if __name__ == '__main__':
     parser.add_argument('-s', type=int, default=defaults['block_size'], dest="block_size", help='字区大小')
     argv = sys.argv[1:]
     if len(argv) == 0:
-        argv = argv = ['http://127.0.0.1/server.py']
+        argv = argv = ['http://127.0.0.1/rzjh.zip']
     args = parser.parse_args(argv)
     start_time = time.time()
-    pathT = 'rzjh'
+    pathT = 'rzjh_update'
     version_url = 'http://127.0.0.1/version.json'
     download_url = 'http://127.0.0.1/rzjh.zip'
     version_path = "version.json"
@@ -233,10 +263,11 @@ if __name__ == '__main__':
     if  new_version > local_version:
         print("准备更新，请稍后》》")
         rename(pathT,local_version)
-        download(download_url, args.output, args.thread_count,
-                 args.buffer_size, args.block_size)
+        #download(download_url, output, args.thread_count,
+         #        args.buffer_size, args.block_size)
+        new_download(download_url,zipfile_name)
         reversion(version_path, new_version)
-        delold()
+        #delold()
         un_zip(zipfile_name)
         delzip(pathT, zipfile_name)
         newrename(pathT, new_version, zipfile_name)
