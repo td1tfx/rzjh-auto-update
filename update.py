@@ -29,7 +29,7 @@ def get_file_info(url):  # 发送请求读取要下载的文件大小
     res = urllib.request.urlopen(HeadRequest(url))
     res.read()
     headers = dict(res.headers)
-    size = int(headers.get('content-length', 0))
+    size = int(headers.get('Content-Length', 0))
     lastmodified = headers.get('last-modified', '')
     name = None
     if 'content-disposition'in headers:
@@ -67,13 +67,17 @@ def download(url, output,  # 下载
                        (i + 1) * block_size - 1] for i in range(block_count)]
             blocks[-1][-1] += remain
         with open(workpath, 'wb') as fobj:
-            fobj.write('')
+            fobj.write(''.encode(encoding='UTF8'))
     print('Downloading %s' % url)
     threading.Thread(target=_monitor, args=(
         infopath, file_info, blocks)).start()
     with open(workpath, 'rb+') as fobj:
-        args = [(url, blocks, fobj, buffer_size)
+        if len(blocks)>1:
+            args = [(url, blocks, fobj, buffer_size)
                 for i in range(len(blocks)) if blocks[1] < blocks[2]]
+        else:
+            args = [(url, blocks, fobj, buffer_size)
+                for i in range(len(blocks))]
         if thread_count > len(args):
             thread_count = len(args)
         pool = ThreadPool(thread_count)
@@ -101,7 +105,7 @@ def _worker(url, block, fobj, buffer_size):  # 发送请求，确认后开始下
             block[1] += len(chunk)
 
 def progress(percent, width=50):  # 显示下载进度
-    print("%s %d%%\r" % (('%%-%ds' % width) % (width * percent / 100 * '>>'), percent)),
+    print("%s %d%%\r" % (('%%-%ds' % width) % (width * percent / 100 ), percent)),
     if percent >= 100:
         print
         sys.stdout.flush()
@@ -134,16 +138,25 @@ def getlocalversion(version_path):  # 读取本地版本信息
     print(version)
     return version
 
-def geturl1(version_path):  # 发送第一条请求将版本信息上传到服务器
+def geturl1(version_path, local_url):  # 发送第一条请求将版本信息上传到服务器
     #version_path="/version.json"
-    url = getlocalversion(version_path)   #将版本号写在http上
-    res_data = urllib.request.urlopen(url)
+    local_version = getlocalversion(version_path)   #将版本号写在http上
+    data_content = {'download':'1','version':local_version}
+    data_urlencode= urllib.parse.urlencode(data_content)
+    print(data_urlencode)
+    req = urllib.request.Request(url = local_url, data = data_urlencode.encode(encoding='UTF8'))
+    print(req)
+    res_data = urllib.request.urlopen(req)
     res = res_data.read()
-    return res  # 服务器返回信息作为返回值
+    print(res)
+    h = json.loads(res)
+    server_version = h["version"]
+    print(server_version)
+    return server_version  # 服务器返回信息作为返回值
 
 def getYN(res):  # 读取第一条请求的返回信息的YN值    Update=1下载，否则终止下载
     h = json.loads(res)
-    YN = h["Update"]
+    YN = h["version"]
     return YN
 
 def getserversion(res):  # 读取第一条请求的返回信息的version值即新版本号
@@ -173,21 +186,25 @@ def newrename(pathT, j, zipfile_name):  # 将解压后的压缩包更名到  包
     os.rename(zipfile_name + "_files", b.encode("utf-8"))
     return b
 
-def reversion(version_path):  # 将获取的新版本号替换进老版本信息中
+def reversion(version_path, new_version):  # 将获取的新版本号替换进老版本信息中
     f = open(version_path, 'r+')
     data = f.read()
     print(data)
     j = json.loads(data)
-    res = geturl1(version_path) 
-    j["version"] = getserversion(res)
+    #res = geturl1(version_path) 
+    j["version"] = new_version
     with open(version_path, 'wb') as f:
         f.write(json.dumps(j))  # 写进json
 
 
-def rename(pathT,version_path):  # 更改老版本文件名
+def rename(pathT,local_version):  # 更改老版本文件名
     os.listdir(pathT)
     b = 'willdele'
-    os.rename('filename' + getlocalversion(version_path), b.encode("utf-8"))
+    name = '{}{}{}'.format('rzjh', local_version, '.zip')
+    if os.path.exists(name):
+        os.rename(name, b.encode("utf-8"))
+    else:
+        pass    
 
 def delold():  # 删除更名后的老版本
     shutil.rmtree("将要删除的文件夹路径和文件夹名willdele")
@@ -202,21 +219,23 @@ if __name__ == '__main__':
     parser.add_argument('-s', type=int, default=defaults['block_size'], dest="block_size", help='字区大小')
     argv = sys.argv[1:]
     if len(argv) == 0:
-        argv = argv = ['http:XXXXX']
+        argv = argv = ['http://127.0.0.1/server.py']
     args = parser.parse_args(argv)
     start_time = time.time()
     pathT = 'rzjh'
+    version_url = 'http://127.0.0.1/version.json'
+    download_url = 'http://127.0.0.1/rzjh.zip'
     version_path = "version.json"
-    res = geturl1(version_path)
-    yn = getYN(res)
-    new_version = getserversion(res)
-    zipfile_name = "rzjh" + new_version + ".zip"
-    if yn == 1:
+    local_version = getlocalversion(version_path) 
+    new_version= geturl1(version_path,version_url )
+    # new_version = getserversion(res)
+    zipfile_name = '{}{}{}'.format('rzjh', new_version, '.zip')
+    if  new_version > local_version:
         print("准备更新，请稍后》》")
-        rename(pathT,version_path)
-        download(args.url, args.output, args.thread_count,
+        rename(pathT,local_version)
+        download(download_url, args.output, args.thread_count,
                  args.buffer_size, args.block_size)
-        reversion(version_path)
+        reversion(version_path, new_version)
         delold()
         un_zip(zipfile_name)
         delzip(pathT, zipfile_name)
