@@ -168,6 +168,15 @@ def getlocalversion(version_path):  # 读取本地版本信息
     print(version)
     return version
 
+def getserverip(version_path):  # 读取本地版本信息
+    f = open(version_path, 'rb')  # 打开路径下的json文件，‘rb’表示文件可读
+    data = f.read()
+    print(data)
+    j = json.loads(data)
+    serverip = j["serverip"]  # 读取key"version"对应的value值
+    print(serverip)
+    return serverip
+
 def geturl1(version_path, local_url):  # 发送第一条请求将版本信息上传到服务器
     #version_path="/version.json"
     local_version = getlocalversion(version_path)   #将版本号写在http上
@@ -212,7 +221,7 @@ def delzip(pathT, zipfile_name):  # 删除压缩包
 
 def newrename(pathT, j, zipfile_name):  # 将解压后的压缩包更名到  包名+版本号
     os.listdir(pathT)
-    b =  '{}{}'.format('rzjh', j) 
+    b =  '{}{}'.format('rzjh_patch', j)
     os.rename(zipfile_name + "_files", b.encode("utf-8"))
     return b
 
@@ -229,6 +238,10 @@ def reversion(version_path, new_version):  # 将获取的新版本号替换进�
 
 
 def rename(pathT,local_version):  # 更改老版本文件名
+    if os.path.exists(pathT):
+        pass
+    else:
+        os.mkdir(pathT)
     os.listdir(pathT)
     b = 'willdele'
     name = '{}{}{}'.format('rzjh', local_version, '.zip')
@@ -240,31 +253,19 @@ def rename(pathT,local_version):  # 更改老版本文件名
 #def delold():  # 删除更名后的老版本
     #shutil.rmtree("将要删除的文件夹路径和文件夹名willdele")
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='多线程文件下载器.')
-    parser.add_argument('url', type=str, help='下载连接')
-    parser.add_argument('-o', type=str, default=None, dest="output", help='输出文件')
-    parser.add_argument('-t', type=int, default=defaults['thread_count'], dest="thread_count", help='下载的线程数量')
-    parser.add_argument('-b', type=int, default=defaults['buffer_size'], dest="buffer_size", help='缓存大小')
-    parser.add_argument('-s', type=int, default=defaults['block_size'], dest="block_size", help='字区大小')
-    argv = sys.argv[1:]
-    if len(argv) == 0:
-        argv = argv = ['http://127.0.0.1/rzjh.zip']
-    args = parser.parse_args(argv)
+def update():
     start_time = time.time()
     pathT = 'rzjh_update'
-    version_url = 'http://127.0.0.1/version.json'
-    download_url = 'http://127.0.0.1/rzjh.zip'
-    version_path = "version.json"
-    local_version = getlocalversion(version_path) 
+    version_path = "config.json"
+    server_ip = getserverip(version_path)
+    version_url = '{}{}{}'.format('http://', server_ip, '/version.json')
+    download_url = '{}{}{}'.format('http://', server_ip, '/rzjh.zip')
+    local_version = getlocalversion(version_path)
     new_version= geturl1(version_path,version_url )
-    # new_version = getserversion(res)
     zipfile_name = '{}{}{}'.format('rzjh', new_version, '.zip')
     if  new_version > local_version:
         print("准备更新，请稍后》》")
         rename(pathT,local_version)
-        #download(download_url, output, args.thread_count,
-         #        args.buffer_size, args.block_size)
         new_download(download_url,zipfile_name)
         reversion(version_path, new_version)
         #delold()
