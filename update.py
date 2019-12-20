@@ -162,47 +162,35 @@ def read_data(filepath):
 def getlocalversion(version_path):  # 读取本地版本信息
     f = open(version_path, 'rb')  # 打开路径下的json文件，‘rb’表示文件可读
     data = f.read()
-    print(data)
+    #print(data)
     j = json.loads(data)
     version = j["version"]  # 读取key"version"对应的value值
-    print(version)
+    print("本地版本：", version)
     return version
 
 def getserverip(version_path):  # 读取本地版本信息
     f = open(version_path, 'rb')  # 打开路径下的json文件，‘rb’表示文件可读
     data = f.read()
-    print(data)
+    #print(data)
     j = json.loads(data)
     serverip = j["serverip"]  # 读取key"version"对应的value值
-    print(serverip)
+    print("连接更新服务器：", serverip)
     return serverip
 
-def geturl1(version_path, local_url):  # 发送第一条请求将版本信息上传到服务器
-    #version_path="/version.json"
-    local_version = getlocalversion(version_path)   #将版本号写在http上
+def geturl1(local_version, local_url):  # 发送第一条请求将版本信息上传到服务器
     data_content = {'download':'1','version':local_version}
     data_urlencode= urllib.parse.urlencode(data_content)
-    print(data_urlencode)
+    #print(data_urlencode)
     req = urllib.request.Request(url = local_url, data = data_urlencode.encode(encoding='UTF8'))
-    print(req)
+    #print(req)
     res_data = urllib.request.urlopen(req)
     res = res_data.read()
-    print(res)
+    #print(res)
     h = json.loads(res)
     server_version = h["version"]
-    print(server_version)
+    print("服务器版本：", server_version)
     return server_version  # 服务器返回信息作为返回值
 
-def getYN(res):  # 读取第一条请求的返回信息的YN值    Update=1下载，否则终止下载
-    h = json.loads(res)
-    YN = h["version"]
-    return YN
-
-def getserversion(res):  # 读取第一条请求的返回信息的version值即新版本号
-    w = json.loads(res)
-    version = w["version"]
-    print (version)
-    return version
 
 
 def un_zip(file_name):  # 对下载下来的压缩包进行解压
@@ -222,15 +210,19 @@ def delzip(pathT, zipfile_name):  # 删除压缩包
 def newrename(pathT, j, zipfile_name):  # 将解压后的压缩包更名到  包名+版本号
     os.listdir(pathT)
     b =  '{}{}'.format('rzjh_patch', j)
-    os.rename(zipfile_name + "_files", b.encode("utf-8"))
+    if os.path.exists(b):
+        shutil.rmtree(b)
+        os.rename(zipfile_name + "_files", b.encode("utf-8"))
+    else:
+        os.rename(zipfile_name + "_files", b.encode("utf-8"))
     return b
 
 def reversion(version_path, new_version):  # 将获取的新版本号替换进老版本信息中
     f = open(version_path, 'r+')
     data = f.read()
-    print(data)
+    #print(data)
     j = json.loads(data)
-    print(j)
+    #print(j)
     #res = geturl1(version_path) 
     j["version"] = new_version
     with open(version_path, 'wb') as f:
@@ -253,6 +245,27 @@ def rename(pathT,local_version):  # 更改老版本文件名
 #def delold():  # 删除更名后的老版本
     #shutil.rmtree("将要删除的文件夹路径和文件夹名willdele")
 
+def movetree(path_s, path_d):
+    files = os.listdir(path_s)
+    for file in files:
+        print(file)
+        path_file = path_s + "\\" + file
+        dest_file = path_d + "\\" + file
+        if os.path.exists(dest_file):
+            if os.path.isfile(dest_file):
+                os.remove(dest_file)
+            else:
+                shutil.rmtree(dest_file)
+            shutil.move(path_file, path_d)
+        else:
+            shutil.move(path_file, path_d)
+
+def excuteexe():
+    main_exe = "In_stories.exe"
+    if os.path.exists(main_exe):
+        rv = os.system(main_exe)
+        print(rv)
+
 def update():
     start_time = time.time()
     pathT = 'rzjh_update'
@@ -261,7 +274,7 @@ def update():
     version_url = '{}{}{}'.format('http://', server_ip, '/version.json')
     download_url = '{}{}{}'.format('http://', server_ip, '/rzjh.zip')
     local_version = getlocalversion(version_path)
-    new_version= geturl1(version_path,version_url )
+    new_version= geturl1(local_version,version_url )
     zipfile_name = '{}{}{}'.format('rzjh', new_version, '.zip')
     if  new_version > local_version:
         print("准备更新，请稍后》》")
@@ -271,7 +284,11 @@ def update():
         #delold()
         un_zip(zipfile_name)
         delzip(pathT, zipfile_name)
-        newrename(pathT, new_version, zipfile_name)
+        new_name = newrename(pathT, new_version, zipfile_name)
+        print(new_name)
+        movetree(new_name, sys.path[0])
+        excuteexe()
     else:
         print ("已经是最新版本《《")
+        excuteexe()
         exit()
