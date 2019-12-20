@@ -8,7 +8,7 @@ import time
 import shutil
 from threading import Thread
 
-def new_download(url, file_path):
+def new_download(url, file_path, ui):
     # 第一次请求是为了得到文件总大小
     r1 = requests.get(url, stream=True, verify=False)
     total_size = int(r1.headers['Content-Length'])
@@ -39,6 +39,11 @@ def new_download(url, file_path):
                 done = int(50 * temp_size / total_size)
                 sys.stdout.write("\r[%s%s] %d%%" % ('█' * done, ' ' * (50 - done), 100 * temp_size / total_size))
                 sys.stdout.flush()
+                done_2 = int(100 * temp_size / total_size)
+                done_3 = 0
+                if done_2 % 10 == 0 and done_2 > done_3:
+                   done_3 = done_2
+                   ui.printf("已完成:"+str(done_2))
     print()  # 避免上面\r 回车符
 
 def getlocalversion(version_path):  # 读取本地版本信息
@@ -47,7 +52,6 @@ def getlocalversion(version_path):  # 读取本地版本信息
     #print(data)
     j = json.loads(data)
     version = j["version"]  # 读取key"version"对应的value值
-    print("本地版本：", version)
     return version
 
 def getserverip(version_path):  # 读取本地版本信息
@@ -56,7 +60,6 @@ def getserverip(version_path):  # 读取本地版本信息
     #print(data)
     j = json.loads(data)
     serverip = j["serverip"]  # 读取key"version"对应的value值
-    print("连接更新服务器：", serverip)
     return serverip
 
 def geturl1(local_version, local_url):  # 发送第一条请求将版本信息上传到服务器
@@ -70,7 +73,6 @@ def geturl1(local_version, local_url):  # 发送第一条请求将版本信息�
     #print(res)
     h = json.loads(res)
     server_version = h["version"]
-    print("服务器版本：", server_version)
     return server_version  # 服务器返回信息作为返回值
 
 
@@ -130,17 +132,18 @@ def rename(pathT,local_version):  # 更改老版本文件名
 def movetree(path_s, path_d):
     files = os.listdir(path_s)
     for file in files:
-        print(file)
         path_file = path_s + "\\" + file
         dest_file = path_d + "\\" + file
-        if os.path.exists(dest_file):
-            if os.path.isfile(dest_file):
+        if os.path.isfile(dest_file):
+            if os.path.exists(dest_file):
                 os.remove(dest_file)
+                shutil.move(path_file, path_d)
             else:
-                shutil.rmtree(dest_file)
-            shutil.move(path_file, path_d)
+                shutil.move(path_file, path_d)
         else:
-            shutil.move(path_file, path_d)
+            movetree(path_file, dest_file)
+
+
 
 def excuteexe():
     main_exe = "In_stories.exe"
@@ -150,30 +153,35 @@ def excuteexe():
         thread.start()
         print("run ", main_exe)
 
-def update():
+def update(ui):
     start_time = time.time()
     pathT = 'rzjh_update'
     version_path = "config.json"
     server_ip = getserverip(version_path)
+    ui.printf("连接更新服务器：" + str(server_ip))
     version_url = '{}{}{}'.format('http://', server_ip, '/version.json')
     download_url = '{}{}{}'.format('http://', server_ip, '/rzjh.zip')
     local_version = getlocalversion(version_path)
+    ui.printf("本地版本：" + str(local_version))
     new_version= geturl1(local_version,version_url )
+    ui.printf("服务器版本：" + str(new_version))
     zipfile_name = '{}{}{}'.format('rzjh', new_version, '.zip')
     if  new_version > local_version:
-        print("准备更新，请稍后》》")
+        ui.printf("准备更新，请稍后》》")
         rename(pathT,local_version)
-        new_download(download_url,zipfile_name)
+        new_download(download_url,zipfile_name, ui)
+        ui.printf("下载完毕》》")
+        ui.printf("正在解压，请稍后》》")
         reversion(version_path, new_version)
-        #delold()
         un_zip(zipfile_name)
         delzip(pathT, zipfile_name)
         new_name = newrename(pathT, new_version, zipfile_name)
-        print(new_name)
+        ui.printf("正在执行文件替换，请稍后》》")
         movetree(new_name, ".\\")
+        ui.printf("文件替换完成，启动游戏》》")
         excuteexe()
         exit()
     else:
-        print ("已经是最新版本《《")
+        ui.printf("已经是最新版本《《")
         excuteexe()
         exit()

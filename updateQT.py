@@ -10,11 +10,11 @@ import sys
 import update
 
 from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtWidgets import (QWidget, QToolTip, QDesktopWidget, QMessageBox, QPushButton, QApplication)
+from PyQt5.QtWidgets import (QWidget, QToolTip, QDesktopWidget, QMessageBox, QPushButton, QApplication, QPushButton, QMainWindow)
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import QCoreApplication
 
-class updateUI(QWidget):
+class updateUI(QMainWindow):
     def __init__(self):
         super().__init__()
 
@@ -29,19 +29,29 @@ class updateUI(QWidget):
 
         update_btn = QPushButton('检查更新', self)
         update_btn.setToolTip('连接服务器进行 <b>更新</b> 无法回退请注意！')
-        update_btn.setGeometry(QtCore.QRect(150, 170, 75, 23))
+        update_btn.setGeometry(QtCore.QRect(290, 400, 80, 26))
         update_btn.setObjectName("检查更新")
-        update_btn.clicked.connect(update.update)
+        update_btn.clicked.connect(self.callupdate)
+
 
         quit_btn = QPushButton('退出更新', self)
         quit_btn.setToolTip('退出更新程序')
-        quit_btn.setGeometry(QtCore.QRect(150, 210, 75, 23))
+        quit_btn.setGeometry(QtCore.QRect(420, 400, 80, 26))
         quit_btn.setObjectName("退出更新")
         quit_btn.clicked.connect(QCoreApplication.instance().quit)
 
-        self.setGeometry(400, 400, 400, 300)
+        self.textBrowser = QtWidgets.QTextBrowser(self)
+        self.textBrowser.setGeometry(QtCore.QRect(150, 20, 450, 350))
+        self.textBrowser.setMaximumSize(QtCore.QSize(16777215, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("宋体")
+        self.textBrowser.setFont(font)
+        self.textBrowser.setObjectName("更新信息显示")
+
+        self.setGeometry(400, 400, 800, 600)
         self.setWindowTitle('人在江湖在线更新')
         self.center()
+        self.printf("欢迎使用人在江湖自动更新程序-made by 泥巴")
         self.show()
 
     def closeEvent(self, event):
@@ -65,7 +75,20 @@ class updateUI(QWidget):
         qr.moveCenter(cp)
         self.move(qr.topLeft())
 
+    def printf(self, mypstr):
+
+        #自定义类print函数,借用c语言 printf
+        #Mypstr：是待显示的字符串
+        self.textBrowser.append(mypstr)   #在指定的区域显示提示信息
+        self.cursor=self.textBrowser.textCursor()
+        self.textBrowser.moveCursor(self.cursor.End)  #光标移到最后，这样就会自动显示出来
+        QtWidgets.QApplication.processEvents()  #一定加上这个功能，不然有卡顿
+
+    def callupdate(self):
+        update.update(self)
+
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    ex = updateUI()
+    ui = updateUI()
     sys.exit(app.exec_())
+
