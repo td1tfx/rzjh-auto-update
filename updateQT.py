@@ -27,18 +27,20 @@ class updateUI(QMainWindow):
         # 创建一个提示，我们称之为settooltip()方法。我们可以使用丰富的文本格式
         self.setToolTip('This is a <b>QWidget</b> widget')
 
-        update_btn = QPushButton('检查更新', self)
-        update_btn.setToolTip('连接服务器进行 <b>更新</b> 无法回退请注意！')
-        update_btn.setGeometry(QtCore.QRect(290, 400, 80, 26))
-        update_btn.setObjectName("检查更新")
-        update_btn.clicked.connect(self.callupdate)
+        self.update_btn = QPushButton('检查更新', self)
+        self.update_btn.setToolTip('连接服务器进行 <b>更新</b> 无法回退请注意！')
+        self.update_btn.setGeometry(QtCore.QRect(290, 400, 80, 26))
+        self.update_btn.setObjectName("检查更新")
+        self.update_btn.setEnabled(False)
+        self.update_btn.clicked.connect(self.callupdate)
 
 
-        quit_btn = QPushButton('退出更新', self)
-        quit_btn.setToolTip('退出更新程序')
-        quit_btn.setGeometry(QtCore.QRect(420, 400, 80, 26))
-        quit_btn.setObjectName("退出更新")
-        quit_btn.clicked.connect(QCoreApplication.instance().quit)
+        self.quit_btn = QPushButton('开始游戏', self)
+        self.quit_btn.setToolTip('开始游戏')
+        self.quit_btn.setGeometry(QtCore.QRect(420, 400, 80, 26))
+        self.quit_btn.setObjectName("开始游戏")
+        #quit_btn.clicked.connect(QCoreApplication.instance().quit)
+        self.quit_btn.clicked.connect(update.excuteExe)
 
         self.textBrowser = QtWidgets.QTextBrowser(self)
         self.textBrowser.setGeometry(QtCore.QRect(150, 20, 450, 350))
@@ -85,10 +87,41 @@ class updateUI(QMainWindow):
         QtWidgets.QApplication.processEvents()  #一定加上这个功能，不然有卡顿
 
     def callupdate(self):
-        update.update(self)
+        update_avalible = update.checkUpdate(self)
+        if update_avalible > 0:
+            self.update_btn.setEnabled(True)
+            is_update = QMessageBox.information(self, "选择是否更新", "有可用更新，是否立即更新？", QMessageBox.Yes | QMessageBox.No)
+            if is_update == QMessageBox.Yes:
+                update.doUpdate(self)
+                self.update_btn.setEnabled(False)
+        else:
+            pass
+
+
+class popupMessage(QWidget):
+
+    def __init__(self):
+        super().__init__()
+        self.initbox()
+
+    def initbox(self):
+        self.setGeometry(100, 200, 200, 150)
+        self.setWindowTitle('人在江湖在线更新')
+        self.center()
+
+    def center(self):
+        # 获得窗口
+        qr = self.frameGeometry()
+        # 获得屏幕中心点
+        cp = QDesktopWidget().availableGeometry().center()
+        # 显示到屏幕中心
+        qr.moveCenter(cp)
+        self.move(qr.topLeft())
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     ui = updateUI()
+    ui.callupdate()
     sys.exit(app.exec_())
 
