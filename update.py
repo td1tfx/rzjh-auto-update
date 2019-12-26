@@ -6,7 +6,7 @@ import json
 import zipfile
 import time
 import shutil
-from threading import Thread
+import subprocess
 
 def newDownload(url, file_path, ui):
     # 第一次请求是为了得到文件总大小
@@ -66,7 +66,7 @@ def geturl1(local_version, local_url):  # 发送第一条请求将版本信息�
     data_content = {'download':'1','version':local_version}
     data_urlencode= urllib.parse.urlencode(data_content)
     #print(data_urlencode)
-    req = urllib.request.Request(url = local_url, data = data_urlencode.encode(encoding='UTF8'))
+    req = urllib.request.Request(url = local_url, data = data_urlencode.encode(encoding='UTF8'), method='GET')
     #print(req)
     res_data = urllib.request.urlopen(req)
     res = res_data.read()
@@ -148,11 +148,13 @@ def moveTree(path_s, path_d):
 def excuteExe():
     main_exe = "In_stories.exe"
     if os.path.exists(main_exe):
-        thread = Thread()
-        thread.run = lambda: os.system(main_exe)
-        thread.start()
+        #thread = Thread()
+        #thread.run = lambda: os.system(main_exe)
+        #thread.start()
+        #os.system(main_exe)
+        subprocess.Popen(main_exe)
         print("run ", main_exe)
-        exit()
+    sys.exit()
 
 def doUpdate(ui):
     version_path = "config.json"
@@ -181,6 +183,7 @@ def doUpdate(ui):
     ui.printf("文件替换完成，启动游戏》》")
     excuteExe()
 
+
 def checkUpdate(ui):
     start_time = time.time()
     version_path = "config.json"
@@ -195,9 +198,7 @@ def checkUpdate(ui):
     if  new_version > local_version:
         ui.printf("有可用更新》》")
         return True
-        #doUpdate(ui, version_path, new_version, download_url)
     else:
         ui.printf("已经是最新版本《《")
         return False
-        #excuteExe()
 
