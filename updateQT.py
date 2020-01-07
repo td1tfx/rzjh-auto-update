@@ -8,6 +8,8 @@
 
 import sys
 import update
+import subprocess
+import os
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import (QWidget, QToolTip, QDesktopWidget, QMessageBox, QPushButton, QApplication, QPushButton, QMainWindow)
@@ -29,7 +31,7 @@ class updateUI(QMainWindow):
 
         self.update_btn = QPushButton('检查更新', self)
         self.update_btn.setToolTip('连接服务器进行 <b>更新</b> 无法回退请注意！')
-        self.update_btn.setGeometry(QtCore.QRect(290, 400, 80, 26))
+        self.update_btn.setGeometry(QtCore.QRect(250, 400, 80, 26))
         self.update_btn.setObjectName("检查更新")
         self.update_btn.setEnabled(False)
         self.update_btn.clicked.connect(self.callupdate)
@@ -37,10 +39,17 @@ class updateUI(QMainWindow):
 
         self.quit_btn = QPushButton('开始游戏', self)
         self.quit_btn.setToolTip('开始游戏')
-        self.quit_btn.setGeometry(QtCore.QRect(420, 400, 80, 26))
+        self.quit_btn.setGeometry(QtCore.QRect(380, 400, 80, 26))
         self.quit_btn.setObjectName("开始游戏")
         #quit_btn.clicked.connect(QCoreApplication.instance().quit)
-        self.quit_btn.clicked.connect(update.excuteExe)
+        self.quit_btn.clicked.connect(self.excuteExe)
+
+        self.quit_btn = QPushButton('显示更新记录', self)
+        self.quit_btn.setToolTip('显示更新记录')
+        self.quit_btn.setGeometry(QtCore.QRect(510, 400, 80, 26))
+        self.quit_btn.setObjectName("显示更新记录")
+        #quit_btn.clicked.connect(QCoreApplication.instance().quit)
+        self.quit_btn.clicked.connect(self.showtxt)
 
         self.textBrowser = QtWidgets.QTextBrowser(self)
         self.textBrowser.setGeometry(QtCore.QRect(150, 20, 450, 350))
@@ -54,6 +63,7 @@ class updateUI(QMainWindow):
         self.setWindowTitle('人在江湖在线更新')
         self.center()
         self.printf("欢迎使用人在江湖自动更新程序-made by 泥巴")
+        self.printf("提醒: 更新前请关闭游戏，否则更新会失败！")
         self.show()
 
     def closeEvent(self, event):
@@ -94,8 +104,34 @@ class updateUI(QMainWindow):
             if is_update == QMessageBox.Yes:
                 update.doUpdate(self)
                 self.update_btn.setEnabled(False)
+                is_showgxtxt = QMessageBox.information(self, "是否查看更新日志", "更新完成，是否查看更新日志？", QMessageBox.Yes | QMessageBox.No)
+                if is_showgxtxt == QMessageBox.Yes:
+                    self.showtxt()
+                is_excute = QMessageBox.information(self, "选择是否启动游戏", "更新完成，大侠要直接开始游戏么？", QMessageBox.Yes | QMessageBox.No)
+                if is_excute == QMessageBox.Yes:
+                    self.excuteExe()
+        elif update_avalible < 0 :
+            self.update_btn.setEnabled(True)
         else:
             pass
+
+
+    def excuteExe(self):
+        main_exe = "In_stories.exe"
+        if os.path.exists(main_exe):
+            subprocess.Popen(main_exe)
+            print("run ", main_exe)
+        sys.exit()
+
+    def showtxt(self):
+        txt = "rzjh_gx.txt"
+        if os.path.exists(txt):
+            with open(txt, 'r') as f:
+                gxtxt = f.read()
+                QMessageBox.about(self,"更新记录",gxtxt)
+        else:
+            self.printf("找不到任何更新记录！")
+
 
 
 class popupMessage(QWidget):

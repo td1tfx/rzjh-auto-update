@@ -6,7 +6,7 @@ import json
 import zipfile
 import time
 import shutil
-import subprocess
+
 
 def newDownload(url, file_path, ui):
     # 第一次请求是为了得到文件总大小
@@ -67,10 +67,17 @@ def geturl1(local_version, local_url):  # 发送第一条请求将版本信息�
     data_urlencode= urllib.parse.urlencode(data_content)
     #print(data_urlencode)
     req = urllib.request.Request(url = local_url, data = data_urlencode.encode(encoding='UTF8'), method='GET')
-    #print(req)
-    res_data = urllib.request.urlopen(req)
+    try:
+        res_data = urllib.request.urlopen(req)
+    except urllib.error.HTTPError as e:
+        print(e.code)
+        print(e.reason)
+        return -1
+    except urllib.error.URLError as e:
+        # print(e.code)
+        print(e.reason)
+        return -1
     res = res_data.read()
-    #print(res)
     h = json.loads(res)
     server_version = h["version"]
     return server_version  # 服务器返回信息作为返回值
@@ -145,16 +152,6 @@ def moveTree(path_s, path_d):
 
 
 
-def excuteExe():
-    main_exe = "In_stories.exe"
-    if os.path.exists(main_exe):
-        #thread = Thread()
-        #thread.run = lambda: os.system(main_exe)
-        #thread.start()
-        #os.system(main_exe)
-        subprocess.Popen(main_exe)
-        print("run ", main_exe)
-    sys.exit()
 
 def doUpdate(ui):
     version_path = "config.json"
@@ -162,15 +159,18 @@ def doUpdate(ui):
     ui.printf("连接更新服务器：" + str(server_ip))
     version_url = '{}{}{}'.format('http://', server_ip, '/version.json')
     download_url = '{}{}{}'.format('http://', server_ip, '/rzjh.zip')
+    gxtxt_url = '{}{}{}'.format('http://', server_ip, '/gx.txt')
     local_version = getLocalVersion(version_path)
     ui.printf("本地版本：" + str(local_version))
-    new_version= geturl1(local_version,version_url )
+    new_version= geturl1(local_version,version_url)
     ui.printf("服务器版本：" + str(new_version))
     pathT = 'rzjh_update'
     ui.printf("准备更新，请稍后》》")
     local_version = getLocalVersion(version_path)
     rename(pathT, local_version)
     zipfile_name = '{}{}{}'.format('rzjh', new_version, '.zip')
+    gxtxt_name = 'rzjh_gx.txt'
+    newDownload(gxtxt_url, gxtxt_name, ui)
     newDownload(download_url, zipfile_name, ui)
     ui.printf("下载完毕》》")
     ui.printf("正在解压，请稍后》》")
@@ -181,7 +181,7 @@ def doUpdate(ui):
     ui.printf("正在执行文件替换，请稍后》》")
     moveTree(new_name, ".\\")
     ui.printf("文件替换完成，启动游戏》》")
-    excuteExe()
+
 
 
 def checkUpdate(ui):
@@ -194,11 +194,14 @@ def checkUpdate(ui):
     local_version = getLocalVersion(version_path)
     ui.printf("本地版本：" + str(local_version))
     new_version= geturl1(local_version,version_url )
+    if new_version <= 0:
+        ui.printf("当前服务器繁忙,请稍后再试》》")
+        return -1
     ui.printf("服务器版本：" + str(new_version))
     if  new_version > local_version:
         ui.printf("有可用更新》》")
-        return True
+        return 1
     else:
         ui.printf("已经是最新版本《《")
-        return False
+        return 0
 
