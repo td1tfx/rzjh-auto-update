@@ -189,8 +189,8 @@ def checkUpdate(ui):
     version_path = "config.json"
     server_ip = getServerIp(version_path)
     ui.printf("连接更新服务器：" + str(server_ip))
-    version_url = '{}{}{}'.format('http://', server_ip, '/version.json')
-    download_url = '{}{}{}'.format('http://', server_ip, '/rzjh.zip')
+    version_url = '{}{}{}'.format('http://', server_ip, '/version_cpp.json')
+    download_url = '{}{}{}'.format('http://', server_ip, '/rzjh_cpp.zip')
     local_version = getLocalVersion(version_path)
     ui.printf("本地版本：" + str(local_version))
     new_version= geturl1(local_version,version_url )
@@ -198,9 +198,12 @@ def checkUpdate(ui):
         ui.printf("当前服务器繁忙,请稍后再试》》")
         return -1
     ui.printf("服务器版本：" + str(new_version))
-    if  new_version > local_version:
+    if  new_version - local_version > 0 and new_version-local_version<=0.1:
         ui.printf("有可用更新》》")
         return 1
+    elif new_version - local_version > 0:
+        ui.printf("当前版本过旧，无法自动更新，请完整下载安装包《《")
+        return 0
     else:
         ui.printf("已经是最新版本《《")
         return 0
