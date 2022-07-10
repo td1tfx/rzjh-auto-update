@@ -11,6 +11,7 @@ import update
 import subprocess
 import os
 
+
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import (QWidget, QToolTip, QDesktopWidget, QMessageBox, QPushButton, QApplication, QPushButton, QMainWindow)
 from PyQt5.QtGui import QFont
@@ -117,11 +118,15 @@ class updateUI(QMainWindow):
 
 
     def excuteExe(self):
-        main_exe = "In_stories.exe"
-        if os.path.exists(main_exe):
-            subprocess.Popen(main_exe)
+        main_path = "./bin"
+        main_exe = "/rzjhcpp.exe"
+        if os.path.exists(main_path+main_exe):
+            #subprocess.Popen(main_exe)
+            os.system("cd " + main_path + "&& start ." + main_exe)
             print("run ", main_exe)
-        sys.exit()
+            sys.exit()
+        else:
+            print("can not open ", main_path+main_exe)
 
     def showtxt(self):
         txt = "rzjh_gx.txt"

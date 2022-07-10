@@ -151,14 +151,27 @@ def moveTree(path_s, path_d):
             moveTree(path_file, dest_file)
 
 
+def get_url_Ip(version_path):  # 读取本地版本信息
+    f = open(version_path, 'r')  # 打开路径下的json文件，‘r’表示文件可读
+    data = f.read()
+    j = json.loads(data)
+    version_url = j["version_url"]  # 读取key"version"对应的value值
+    return version_url
+def get_down_url_Ip(version_path):  # 读取本地版本信息
+    f = open(version_path, 'r')  # 打开路径下的json文件，‘r’表示文件可读
+    data = f.read()
+    j = json.loads(data)
+    down_url = j["down_url"]
+    return down_url
+
 
 
 def doUpdate(ui):
     version_path = "config.json"
     server_ip = getServerIp(version_path)
     ui.printf("连接更新服务器：" + str(server_ip))
-    version_url = '{}{}{}'.format('http://', server_ip, '/version.json')
-    download_url = '{}{}{}'.format('http://', server_ip, '/rzjh.zip')
+    version_url = '{}{}{}'.format('http://', server_ip, get_url_Ip(version_path))
+    download_url = '{}{}{}'.format('http://', server_ip, get_down_url_Ip(version_path) )
     gxtxt_url = '{}{}{}'.format('http://', server_ip, '/gx.txt')
     local_version = getLocalVersion(version_path)
     ui.printf("本地版本：" + str(local_version))
@@ -189,8 +202,8 @@ def checkUpdate(ui):
     version_path = "config.json"
     server_ip = getServerIp(version_path)
     ui.printf("连接更新服务器：" + str(server_ip))
-    version_url = '{}{}{}'.format('http://', server_ip, '/version_cpp.json')
-    download_url = '{}{}{}'.format('http://', server_ip, '/rzjh_cpp.zip')
+    version_url = '{}{}{}'.format('http://', server_ip, get_url_Ip(version_path))
+    download_url = '{}{}{}'.format('http://', server_ip, get_down_url_Ip(version_path) )
     local_version = getLocalVersion(version_path)
     ui.printf("本地版本：" + str(local_version))
     new_version= geturl1(local_version,version_url )
